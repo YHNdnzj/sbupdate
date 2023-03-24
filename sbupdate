@@ -1,214 +1,148 @@
 #!/bin/bash
-#
-# sbupdate -- Generate and sign kernel images for UEFI Secure Boot on Arch Linux
-# Copyright (C) 2016-2022 Andrey Vihrov <andrey.vihrov@gmail.com>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-set -eu
+declare -r _f_config=%CONFIG% _f_functions=functions
 
-shopt -s extglob
+_f_key='' _f_cert=''
+_f_efi='' _f_dest=''
+_f_initramfs=''
+_d_boot=''
 
-readonly CONFFILE="/etc/sbupdate.conf"
+_efitype=''
+_kernel=''
+_cmdline='' _uki=''
 
-# Print an error and return unsuccessfully
-#  $1: error message
-function error() {
-  echo "$0: error: $1" >&2
-  return 1
-}
+_ukify=''
 
-# Load configuration
-function load_config() {
-  KEY_DIR="/etc/efi-keys"
-  ESP_DIR="/boot"
-  OUT_DIR="EFI/Arch"
-  SPLASH="/usr/share/systemd/bootctl/splash-arch.bmp"
-  BACKUP=1
-  EXTRA_SIGN=()
-  declare -g -A CONFIGS CMDLINE INITRD OUTPUT
+get_kernel() {
+    local file
+    local -i kernel="$1"
 
-  shopt -s nullglob
-  INITRD_PREPEND=(/boot/@(intel|amd)-ucode.img)
-  shopt -u nullglob
+    file="${_f_efi##*/}"
 
-  [[ -f /etc/kernel/cmdline ]] && CMDLINE_DEFAULT="$(</etc/kernel/cmdline)"
-
-  # shellcheck disable=SC1090
-  source "${CONFFILE}"
-
-  [[ -d "${ESP_DIR}" ]] || error "${ESP_DIR} does not exist"
-  [[ -n "${CMDLINE_DEFAULT:+x}" ]] || error "CMDLINE_DEFAULT is not defined or empty"
-
-  local key=("${KEY_DIR}"/@(DB|db).key); readonly KEY="${key[0]}"
-  local cert=("${KEY_DIR}"/@(DB|db).crt); readonly CERT="${cert[0]}"
-
-  readonly KEY_DIR ESP_DIR OUT_DIR SPLASH BACKUP EXTRA_SIGN INITRD_PREPEND CMDLINE_DEFAULT
-  readonly -A CONFIGS CMDLINE INITRD OUTPUT
-}
-
-# Parse script arguments
-#  $@: arguments
-function parse_args() {
-  FILE_MODE=0
-  HOOK=0
-  REMOVE=0
-
-  while getopts "fkr" opt; do
-    case "${opt}" in
-      f) FILE_MODE=1 ;;
-      k) HOOK=1 ;;
-      r) REMOVE=1 ;;
-      ?) exit 1 ;;
-    esac
-  done
-
-  readonly FILE_MODE HOOK REMOVE
-}
-
-# Create a list of kernels to process
-function get_kernels() {
-  local force_all=0 kdir
-  declare -g -a KERNELS
-
-  if (( HOOK )); then
-    # The script was run from the hook. Read standard input to determine
-    # which kernels we need to update.
-    while read -r target; do
-      if [[ "${target}" =~ ^usr/lib/modules/.+/vmlinuz$ ]]; then
-        # Regular kernel
-        kdir="$(dirname "${target}")"
-        KERNELS+=("$(<"${kdir}/pkgbase")")
-        [[ -f "${kdir}/kernelbase" ]] && KERNELS[-1]="$(<"${kdir}/kernelbase")"
-      else
-        # Another dependency; update all kernels
-        force_all=1
-      fi
+    for kernel in "${file#vmlinuz-}" "$file"; do
+        if in_array "$kernel" "${KERNELS[@]}"; then
+            return 0
+        fi
     done
-  else
-    # The script was run by the user
-    force_all=1
-  fi
 
-  if (( force_all )); then
-    (( ! REMOVE )) || error "trying to remove all kernels"
-    # Match all files without a conventional file extension
-    KERNELS=(/boot/vmlinuz-!(*.+([[:alpha:]]))); KERNELS=("${KERNELS[@]#/boot/vmlinuz-}")
-  fi
-  readonly -a KERNELS
+    return 1
 }
 
-# Return output file path corresponding to an image
-#   $1: configuration name
-function output_name() {
-  echo "${ESP_DIR}/${OUTPUT[$1]:-${OUT_DIR}/$1-signed.efi}"
-}
+enable_extra_sign() {
+    local quiet="$1" units=()
 
-# Remove a signed kernel image
-#   $1: configuration name
-function remove_image() {
-  local output; output="$(output_name "$1")"
-  echo "Removing $(basename "${output}")"
-  if (( BACKUP )); then
-    mv -f "${output}" "${output}.bak"
-  else
-    rm "${output}"
-  fi
-}
+    if (( SBUPDATE_EXTRA_SIGN )); then
+        return 0
+    fi
 
-# Sign a single file
-#   $*: arguments to sbsign
-function sign_file() {
-  sbsign --key "${KEY}" --cert "${CERT}" "$@"
-}
+    systemctl --quiet disable --now "sbupdate@.path"
 
-# Generate a signed kernel image
-#   $1: configuration name
-#   $2: kernel name
-function update_image() {
-  local linux="/boot/vmlinuz-$2"
-  local initrd="${INITRD[$1]:-/boot/initramfs-$1.img}"
-  local cmdline="${CMDLINE[$1]:-${CMDLINE_DEFAULT}}"
-  local output; output="$(output_name "$1")"
+    for file in "${!EXTRA_SIGN[@]}"; do
+        local escaped
 
-  echo "Generating and signing $(basename "${output}")"
-
-  /usr/lib/systemd/ukify \
-    "${linux}" \
-    "${INITRD_PREPEND[@]}" "${initrd}" \
-    --cmdline="${cmdline}" \
-    --splash="${SPLASH}" \
-    --secureboot-private-key="${KEY}" \
-    --secureboot-certificate="${CERT}" \
-    --output="${output}"
-}
-
-# Map kernel versions to image names and process changes
-function process_kernels() {
-  for name in "${KERNELS[@]}"; do
-    for cfg in ${CONFIGS[${name}]:-${name}}; do # Note: unquoted expansion
-      if (( REMOVE )); then
-        remove_image "${cfg}"
-      else
-        update_image "${cfg}" "${name}"
-      fi
+        escaped="$(systemd-escape --path "$file")"
+        units+=("sbupdate@${escaped}.path")
     done
-  done
+
+    systemctl "$quiet" enable --now "${units[@]}"
 }
 
-# Check and sign a user-specified extra file
-#   $1: file path
-function check_sign_extra_file() {
-  if sbverify --cert "${CERT}" "$1" >/dev/null; then
-    echo "Skipping already signed file $1"
-  elif (( HOOK )); then
-    # Signing extra files from the hook is prohibited for security reasons
-    echo "warning: failed to verify $1" >&2
-  else
-    echo "Signing $1"
-    sign_file --output "$1" "$1"
-  fi
-}
+# shellcheck disable=SC1090
+. "$_f_functions"
 
-# Individual file signing mode for use in hooks
-#
-# Read file names from standard input and create .signed files next to them.
-function run_file_mode() {
-  while read -r file; do
-    echo "Signing $(basename "${file}")"
-    sign_file "${file}"
-  done
-  exit
-}
+if [[ -t 1 ]]; then
+    try_enable_color
+fi
 
-# Entry point
-function main() {
-  load_config
-  parse_args "$@"
+# shellcheck disable=SC1091 source=sbupdate.conf
+. "$_f_config" || die "Failed to read config file '%s'" "$_f_config"
 
-  (( FILE_MODE )) && run_file_mode
+[[ -d "$KEY_DIR" ]] || die "KEY_DIR '%s' doesn't exist or isn't a directory" "$KEY_DIR"
 
-  get_kernels
+_f_key="$KEY_DIR/DB.key" _f_cert="$KEY_DIR/DB.crt"
+[[ -f "$_f_key" && -f "$_f_cert" ]] || die "Cannot find Secure Boot key (DB.key) or cert (DB.crt) under KEY_DIR."
 
-  mkdir -p "${ESP_DIR}/${OUT_DIR}"
-  process_kernels
+if [[ "$1" ]]; then
+    enable_extra_sign --quiet
+else
+    if [[ -v KERNELDESTINATION ]]; then
+        exit 0
+    fi
 
-  for f in "${EXTRA_SIGN[@]}"; do
-    check_sign_extra_file "$f"
-  done
-}
+    enable_extra_sign
+    exit
+fi
 
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then main "$@"; fi
+_f_efi="$1"
+[[ -f "$_f_efi" ]] || die "EFI binary '%s' doesn't exist" "$_f_efi"
 
-# vim:set ts=2 sw=2 et:
+_efitype="$(bootctl kernel-identify "$_f_efi" 2>/dev/null)"
+[[ "$_efitype" == "pe" ]] || die "'%s' isn't a valid EFI binary" "$_f_efi"
+
+if (( SBUPDATE_EXTRA_SIGN )); then
+    _f_dest="${EXTRA_SIGN["$_f_efi"]}"
+    if [[ "$_f_dest" ]]; then
+        sbsign --key "$_f_key" --cert "$_f_cert" --output "$_f_dest" "$_f_efi"
+        exit
+    else
+        die "Requested for EXTRA_SIGN but file '%s' isn't listed" "$_f_efi"
+    fi
+fi
+
+_d_boot="$(bootctl --print-boot-path 2>/dev/null)"
+[[ -d "$_d_boot" ]] || die "Failed to locate ESP or XBOOTLDR"
+
+get_kernel "_kernel" || msg "Kernel '%s' isn't configured in config '%s'" "$_f_efi" "$_f_config"
+_f_initramfs="$2"
+
+set -e
+
+declare -i _config="$_kernel"
+
+if [[ ! -v "_config[uki-fallback]" ]]; then
+    if [[ "$_f_initramfs" == *-fallback.img ]]; then
+        exit 0
+    fi
+
+    if [[ -v "_config[uki]" ]]; then
+        _uki="${_config[uki]}"
+    else
+        _uki="${_kernel#vmlinuz-}${UKI_SUFFIX}"
+    fi
+else
+    _uki="${_config[uki-fallback]}"
+fi
+
+if [[ -v "_config[cmdline]" ]]; then
+    _cmdline="${_config[cmdline]} $CMDLINE_ALWAYS"
+else
+    _cmdline="$CMDLINE_DEFAULT $CMDLINE_ALWAYS"
+fi
+
+mkdir -p "$_d_boot/$UKI_DIR"
+_f_dest="$_d_boot/$UKI_DIR/$_uki"
+
+if [[ -f "$_f_dest" ]] && (( BACKUP )); then
+    mv --force --no-copy "$_f_dest" "${_f_dest}.bak"
+fi
+
+msg "Generating UKI for kernel '%s' version '%s'" "$_kernel" "$KERNELVERSION"
+msg2 "Kernel image: %s" "$_f_efi"
+msg2 "Initramfs: %s" "$_f_initramfs"
+msg2 "Microcodes: %s" "${MICROCODES[*]}"
+msg2 "Cmdline: %s" "$_cmdline"
+
+_ukify=(/usr/lib/systemd/ukify "$_f_efi" "${MICROCODES[@]}" "$_f_initramfs"
+        --cmdline="$_cmdline" --uname="$KERNELVERSION"
+        --secureboot-private-key="$_f_key" --secureboot-certificate="$_f_cert"
+        --output="$_f_dest")
+
+if [[ -v SPLASH ]]; then
+    if [[ -f "$SPLASH" ]]; then
+        _ukify+=(--splash="$SPLASH")
+    else
+        warning "Cannot find splash file '%s', ignoring" "$SPLASH"
+    fi
+fi
+
+exec "${_ukify[@]}"

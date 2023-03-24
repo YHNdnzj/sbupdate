@@ -1,0 +1,8 @@
+[Unit]
+Description=Sign the EFI binary '%f' using sbupdate after update
+
+[Path]
+PathChanged=%f
+
+[Install]
+WantedBy=multi-user.target

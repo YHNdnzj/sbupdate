@@ -1,0 +1,7 @@
+[Unit]
+Description=Sign the EFI binary '%f' using sbupdate
+
+[Service]
+Type=oneshot
+Environment=SBUPDATE_EXTRA_SIGN=1
+ExecStart=/usr/bin/sbupdate %f
