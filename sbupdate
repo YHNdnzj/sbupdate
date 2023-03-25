@@ -11,6 +11,7 @@ _d_boot=''
 _efitype=''
 _kernel=''
 _cmdline='' _uki=''
+_fallback=0
 
 _ukify=''
 
@@ -134,18 +135,22 @@ set -eu
 
 declare -n _config="$_kernel"
 
-if [[ ! -v "_config[uki-fallback]" ]]; then
-    if [[ "$_f_initramfs" == *-fallback.img ]]; then
-        exit 0
-    fi
+if [[ "$_f_initramfs" == *-fallback.img ]]; then
+    _fallback=1
+fi
 
+if (( ! _fallback )); then
     if [[ -v "_config[uki]" ]]; then
         _uki="${_config[uki]}"
     else
         _uki="${_kernel#vmlinuz-}${UKI_SUFFIX}"
     fi
 else
-    _uki="${_config[uki-fallback]}"
+    if [[ -v "_config[uki-fallback]" ]]; then
+        _uki="${_config[uki-fallback]}"
+    else
+        exit 0
+    fi
 fi
 
 if [[ -v "_config[cmdline]" ]]; then
