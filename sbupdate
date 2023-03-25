@@ -59,8 +59,10 @@ cleanup() {
     exit "$1"
 }
 
+shopt -s extglob
 # shellcheck disable=SC1090
 . "$_f_functions"
+shopt -u extglob
 
 if [[ -t 1 ]]; then
     try_enable_color
