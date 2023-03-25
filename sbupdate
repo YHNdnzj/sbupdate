@@ -55,6 +55,14 @@ enable_extra_sign() {
     systemctl "$quiet" enable --now "${units[@]}"
 }
 
+strnull() {
+    if [[ "${*// }" ]]; then
+        printf '%s' "$*"
+    else
+        printf '(null)'
+    fi
+}
+
 cleanup() {
     exit "$1"
 }
@@ -147,8 +155,8 @@ fi
 msg "Generating UKI for kernel '%s' version '%s'" "$_kernel" "$KERNELVERSION"
 msg2 "Kernel image: %s" "$_f_efi"
 msg2 "Initramfs: %s" "$_f_initramfs"
-msg2 "Microcodes: %s" "${MICROCODES[*]}"
-msg2 "Cmdline: %s" "$_cmdline"
+msg2 "Microcodes: %s" "$(strnull "${MICROCODES[*]}")"
+msg2 "Cmdline: %s" "$(strnull "$_cmdline")"
 
 _ukify=(/usr/lib/systemd/ukify "$_f_efi" "${MICROCODES[@]}" "$_f_initramfs"
         --cmdline="$_cmdline" --uname="$KERNELVERSION"
