@@ -68,8 +68,8 @@ if [[ -t 1 ]]; then
     try_enable_color
 fi
 
-# shellcheck disable=SC1091 source=sbupdate.conf
-. "$_f_config" || die "Failed to read config file '%s'" "$_f_config"
+# shellcheck disable=SC1091,SC2016 source=sbupdate.conf
+. <(sed '/^KERNELS=/a declare -A "${KERNELS[@]}"' "$_f_config") || die "Failed to read config file '%s'" "$_f_config"
 
 [[ -d "$KEY_DIR" ]] || die "KEY_DIR '%s' doesn't exist or isn't a directory" "$KEY_DIR"
 
