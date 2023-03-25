@@ -16,6 +16,11 @@ _ukify=''
 
 declare -A EXTRA_SIGN
 
+BACKUP=0
+CMDLINE_DEFAULT='' CMDLINE_ALWAYS=''
+UKI_SUFFIX=''
+MICROCODES=()
+
 get_kernel() {
     local file kernel
 
@@ -125,7 +130,7 @@ if [[ ! "$_kernel" ]]; then
 fi
 _f_initramfs="$2"
 
-set -e
+set -eu
 
 declare -n _config="$_kernel"
 
