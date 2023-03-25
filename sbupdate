@@ -3,6 +3,8 @@
 declare -r _f_config=%CONFIG%
 declare -r _f_functions=functions
 
+shopt -s extglob
+
 _f_key='' _f_cert=''
 _f_efi='' _f_dest=''
 _f_initramfs=''
@@ -65,6 +67,12 @@ enable_extra_sign() {
     fi
 }
 
+str_normalize() {
+    local str="$*"
+    str="$(printf '%s' "${str##+([[:space:]])}")"
+    printf '%s' "${str%%+([[:space:]])}"
+}
+
 strnull() {
     if [[ "${*// }" ]]; then
         printf '%s' "$*"
@@ -77,10 +85,8 @@ cleanup() {
     exit "$1"
 }
 
-shopt -s extglob
 # shellcheck disable=SC1090
 . "$_f_functions"
-shopt -u extglob
 
 if [[ -t 1 ]]; then
     try_enable_color
@@ -158,6 +164,7 @@ if [[ -v "_config[cmdline]" ]]; then
 else
     _cmdline="$CMDLINE_DEFAULT $CMDLINE_ALWAYS"
 fi
+_cmdline="$(str_normalize "$_cmdline")"
 
 mkdir -p "$_d_boot/$UKI_DIR"
 _f_dest="$(realpath "$_d_boot/$UKI_DIR/$_uki")"
