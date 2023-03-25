@@ -38,7 +38,12 @@ enable_extra_sign() {
         return 0
     fi
 
-    systemctl --quiet disable --now "sbupdate@.path"
+    systemctl --quiet disable "sbupdate@.path"
+    systemctl --quiet stop "sbupdate@*.path"
+
+    if (( ${#EXTRA_SIGN[@]} == 0 )); then
+        return 0
+    fi
 
     for file in "${!EXTRA_SIGN[@]}"; do
         local escaped
