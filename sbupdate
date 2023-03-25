@@ -123,7 +123,7 @@ _f_initramfs="$2"
 
 set -e
 
-declare -i _config="$_kernel"
+declare -n _config="$_kernel"
 
 if [[ ! -v "_config[uki-fallback]" ]]; then
     if [[ "$_f_initramfs" == *-fallback.img ]]; then
