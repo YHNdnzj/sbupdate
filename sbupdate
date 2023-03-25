@@ -1,6 +1,7 @@
 #!/bin/bash
 
-declare -r _f_config=%CONFIG% _f_functions=functions
+declare -r _f_config=%CONFIG%
+declare -r _f_functions=functions
 
 _f_key='' _f_cert=''
 _f_efi='' _f_dest=''
