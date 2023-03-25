@@ -14,6 +14,8 @@ _cmdline='' _uki=''
 
 _ukify=''
 
+declare -A EXTRA_SIGN
+
 get_kernel() {
     local file
     local -i kernel="$1"
