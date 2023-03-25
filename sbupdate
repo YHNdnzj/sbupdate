@@ -52,7 +52,11 @@ enable_extra_sign() {
         units+=("sbupdate@${escaped}.path")
     done
 
-    systemctl "$quiet" enable --now "${units[@]}"
+    if [[ "$quiet" ]]; then
+        systemctl "$quiet" enable --now "${units[@]}"
+    else
+        systemctl enable --now "${units[@]}"
+    fi
 }
 
 strnull() {
