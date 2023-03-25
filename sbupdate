@@ -17,13 +17,13 @@ _ukify=''
 declare -A EXTRA_SIGN
 
 get_kernel() {
-    local file
-    local -i kernel="$1"
+    local file kernel
 
-    file="${_f_efi##*/}"
+    file="${1##*/}"
 
     for kernel in "${file#vmlinuz-}" "$file"; do
         if in_array "$kernel" "${KERNELS[@]}"; then
+            printf '%s' "$kernel"
             return 0
         fi
     done
@@ -106,7 +106,11 @@ fi
 _d_boot="$(bootctl --print-boot-path 2>/dev/null)"
 [[ -d "$_d_boot" ]] || die "Failed to locate ESP or XBOOTLDR"
 
-get_kernel "_kernel" || msg "Kernel '%s' isn't configured in config '%s'" "$_f_efi" "$_f_config"
+_kernel="$(get_kernel "$_f_efi")"
+if [[ ! "$_kernel" ]]; then
+    msg "Kernel '%s' isn't configured in config '%s', ignoring" "$_f_efi" "$_f_config"
+    exit 0
+fi
 _f_initramfs="$2"
 
 set -e
