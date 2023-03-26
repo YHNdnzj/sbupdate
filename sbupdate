@@ -14,15 +14,14 @@ _efitype=''
 _kernel=''
 _cmdline='' _uki=''
 _fallback=0
-
 _ukify=()
-
-declare -A EXTRA_SIGN
 
 BACKUP=0
 CMDLINE_DEFAULT='' CMDLINE_ALWAYS=''
 UKI_SUFFIX=''
 MICROCODES=()
+
+declare -A EXTRA_SIGN
 
 get_kernel() {
     local file kernel
