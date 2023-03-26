@@ -15,7 +15,7 @@ _kernel=''
 _cmdline='' _uki=''
 _fallback=0
 
-_ukify=''
+_ukify=()
 
 declare -A EXTRA_SIGN
 
