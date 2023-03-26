@@ -59,7 +59,10 @@ enable_extra_sign() {
         to_enable+=("sbupdate@${escaped}.path")
     done
 
-    _systemctl=(systemctl "$quiet" --now)
+    _systemctl=(systemctl --now)
+    if [[ "$quiet" ]]; then
+        _systemctl+=("$quiet")
+    fi
 
     mapfile -t loaded < <(systemctl list-units --quiet --plain --all "sbupdate@*.path")
     for entry in "${loaded[@]}"; do
