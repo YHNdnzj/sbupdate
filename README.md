@@ -41,10 +41,10 @@ However, you need to configure which kernels to generate UKI for and kernel para
 
 This is an extra function provided by `sbupdate` beside generating UKIs. A list of extra EFI binaries can be provided for `sbupdate` to sign using the configured Secure Boot keys. A [systemd.path(5)](https://man.archlinux.org/man/systemd.path.5.en) unit is also enabled to trigger re-signing when the binaries get modified.
 
-### Generate UKIs
+### Generate signed UKIs
 
 ```console
 # mkinitcpio -P
 ```
 
-And confirm that UKIs are put into place as configured in `UKI_DIR` 😉
+And confirm that UKIs are put into place as configured using `UKI_DIR` 😉
