@@ -40,31 +40,35 @@ get_kernel() {
 }
 
 enable_extra_sign() {
-    local quiet="$1" units=()
+    local file escaped unit quiet="$1"
+    local to_enable=() loaded=()
+    local _systemctl
 
     if (( SBUPDATE_EXTRA_SIGN )); then
         return 0
     fi
 
-    systemctl --quiet disable "sbupdate@.path"
-    systemctl --quiet stop "sbupdate@*.path"
-
     if (( ${#EXTRA_SIGN[@]} == 0 )); then
-        return 0
+        systemctl --quiet disable "sbupdate@.path"
+        systemctl --quiet stop "sbupdate@*.path"
+        return
     fi
 
     for file in "${!EXTRA_SIGN[@]}"; do
-        local escaped
-
         escaped="$(systemd-escape --path "$file")"
-        units+=("sbupdate@${escaped}.path")
+        to_enable+=("sbupdate@${escaped}.path")
     done
 
-    if [[ "$quiet" ]]; then
-        systemctl "$quiet" enable --now "${units[@]}"
-    else
-        systemctl enable --now "${units[@]}"
-    fi
+    _systemctl=(systemctl "$quiet" --now)
+
+    mapfile -t loaded < <(systemctl list-units --quiet --all "sbupdate@*.path")
+    for unit in "${loaded[@]}"; do
+        if ! in_array "$unit" "${to_enable[@]}"; then
+            "${_systemctl[@]}" disable "$unit"
+        fi
+    done
+
+    "${_systemctl[@]}" enable "${to_enable[@]}"
 }
 
 str_normalize() {
