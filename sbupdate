@@ -187,11 +187,10 @@ if [[ -f "$_f_dest" ]] && (( BACKUP )); then
     mv --force --no-copy "$_f_dest" "${_f_dest}.bak"
 fi
 
-msg "Generating UKI for kernel '%s' version '%s'" "$_kernel" "$KERNELVERSION"
-msg2 "UKI: %s" "$_f_dest"
-msg2 "Kernel: %s" "$_f_efi"
+msg "Generating signed UKI '%s'" "$_f_dest"
+msg2 "Kernel: %s (%s) - %s" "$_kernel" "$KERNELVERSION" "$_f_efi"
 msg2 "Initramfs: %s" "$_f_initramfs"
-msg2 "Microcodes: %s" "$(strnull "${MICROCODES[*]}")"
+msg2 "Microcode(s): %s" "$(strnull "${MICROCODES[*]}")"
 msg2 "Cmdline: %s" "$(strnull "$_cmdline")"
 
 _ukify=(/usr/lib/systemd/ukify "$_f_efi" "${MICROCODES[@]}" "$_f_initramfs"
