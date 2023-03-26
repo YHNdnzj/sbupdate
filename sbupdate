@@ -47,9 +47,14 @@ enable_extra_sign() {
         return 0
     fi
 
+    _systemctl=(systemctl --now)
+    if [[ "$quiet" ]]; then
+        _systemctl+=("$quiet")
+    fi
+
     if (( ${#EXTRA_SIGN[@]} == 0 )); then
-        systemctl --quiet disable "sbupdate@.path"
-        systemctl --quiet stop "sbupdate@*.path"
+        "${_systemctl[@]}" disable "sbupdate@.path"
+        "${_systemctl[@]}" stop "sbupdate@*.path"
         return
     fi
 
@@ -57,11 +62,6 @@ enable_extra_sign() {
         escaped="$(systemd-escape --path "$file")"
         to_enable+=("sbupdate@${escaped}.path")
     done
-
-    _systemctl=(systemctl --now)
-    if [[ "$quiet" ]]; then
-        _systemctl+=("$quiet")
-    fi
 
     mapfile -t loaded < <(systemctl list-units --quiet --plain --all "sbupdate@*.path")
     for entry in "${loaded[@]}"; do
