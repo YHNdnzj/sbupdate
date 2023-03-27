@@ -1,6 +1,6 @@
 # sbupdate
 
-Generate (signed) Unified Kernel Images
+Generate signed Unified Kernel Images
 
 > This tool is originally developed by [Andrey Vihrov](https://github.com/andreyv/sbupdate),
 > now rewritten as a mkinitcpio post hook by YHNdnzj
