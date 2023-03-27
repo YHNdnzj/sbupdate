@@ -168,9 +168,17 @@ if (( ! _fallback )); then
 else
     if [[ -v "_config[uki-fallback]" ]]; then
         _uki="${_config[uki-fallback]}"
-    else
-        exit 0
     fi
+fi
+if [[ ! "$_uki" ]]; then
+    if (( _fallback )); then
+        exit 0
+    else
+        die "Kernel '%s' has an empty 'uki' setting" "$_kernel"
+    fi
+fi
+if [[ "$_uki" != *.efi ]]; then
+    _uki+=".efi"
 fi
 
 if [[ -v "_config[cmdline]" ]]; then
