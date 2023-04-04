@@ -1,5 +1,6 @@
 [Unit]
 Description=Sign the EFI binary '%f' using sbupdate after update
+AssertFileNotEmpty=%f
 
 [Path]
 PathChanged=%f
