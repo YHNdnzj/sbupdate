@@ -31,11 +31,11 @@ Various ways of doing this can be found on [ArchWiki](https://wiki.archlinux.org
 
 However, you need to configure which kernels to generate UKI for and kernel parameters. All available settings are listed in `/etc/sbupdate.conf` with examples.
 
-### ESP mountpoint
+#### ESP mountpoint
 
 `sbupdate` uses `bootctl --print-boot-path` to acquire the mountpoint of EFI System Partition or XBOOTLDR. This shouldn't need manual configuration.
 
-### EXTRA_SIGN
+#### EXTRA_SIGN
 
 This is an extra function provided by `sbupdate` beside generating UKIs. A list of extra EFI binaries can be provided for `sbupdate` to sign using the configured Secure Boot keys. A [systemd.path(5)](https://man.archlinux.org/man/systemd.path.5.en) unit is also enabled to trigger re-signing when the binaries get modified.
 
