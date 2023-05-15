@@ -76,7 +76,10 @@ enable_extra_sign() {
     done
 
     "${_systemctl[@]}" enable --now "${to_enable[@]}"
-    "${_systemctl[@]}" start --no-block "${to_start[@]}"
+
+    if (( ${#to_start[@]} > 0 )); then
+        "${_systemctl[@]}" start --no-block "${to_start[@]}"
+    fi
 }
 
 str_normalize() {
