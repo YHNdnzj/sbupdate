@@ -41,7 +41,7 @@ get_kernel() {
 enable_extra_sign() {
     local quiet="$1" _systemctl
     local file escaped entry unit
-    local to_enable=() loaded=()
+    local to_enable=() to_start=() loaded=()
 
     if (( SBUPDATE_EXTRA_SIGN )); then
         return 0
@@ -61,6 +61,10 @@ enable_extra_sign() {
     for file in "${!EXTRA_SIGN[@]}"; do
         escaped="$(systemd-escape --path "$file")"
         to_enable+=("sbupdate@${escaped}.path")
+
+        if [[ ! -e "${EXTRA_SIGN["$file"]}" ]]; then
+            to_start+=("sbupdate@${escaped}.service")
+        fi
     done
 
     mapfile -t loaded < <(systemctl list-units --quiet --plain --all "sbupdate@*.path")
@@ -72,6 +76,7 @@ enable_extra_sign() {
     done
 
     "${_systemctl[@]}" enable --now "${to_enable[@]}"
+    "${_systemctl[@]}" start --no-block "${to_start[@]}"
 }
 
 str_normalize() {
