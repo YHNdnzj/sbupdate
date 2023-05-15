@@ -15,7 +15,8 @@ $ aur_helper -S sbupdate-mkinitcpio
 
 ### Generate custom Secure Boot keys
 
-Various ways of doing this can be found on [ArchWiki](https://wiki.archlinux.org/title/Unified_Extensible_Firmware_Interface/Secure_Boot#Creating_keys), and the simplest of which is to use [sbkeys](https://github.com/electrickite/sbkeys):
+Various ways of doing this can be found on [ArchWiki](https://wiki.archlinux.org/title/Unified_Extensible_Firmware_Interface/Secure_Boot#Creating_keys),
+and the simplest of which is to use [sbkeys](https://github.com/electrickite/sbkeys):
 
 ```console
 # mkdir -m 0700 /etc/efi-keys
@@ -37,7 +38,9 @@ However, you need to configure which kernels to generate UKI for and kernel para
 
 #### EXTRA_SIGN
 
-This is an extra function provided by `sbupdate` beside generating UKIs. A list of extra EFI binaries can be provided for `sbupdate` to sign using the configured Secure Boot keys. A [systemd.path(5)](https://man.archlinux.org/man/systemd.path.5.en) unit is also enabled to trigger re-signing when the binaries get modified.
+This is an extra function provided by `sbupdate` beside generating UKIs.
+A list of extra EFI binaries can be provided for `sbupdate` to sign using the configured Secure Boot keys.
+A [systemd.path(5)](https://man.archlinux.org/man/systemd.path.5.en) unit is also enabled to trigger re-signing when the binaries get modified.
 
 ### Generate signed UKIs
 
