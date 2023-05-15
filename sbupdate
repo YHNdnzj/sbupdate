@@ -47,7 +47,7 @@ enable_extra_sign() {
         return 0
     fi
 
-    _systemctl=(systemctl --now)
+    _systemctl=(systemctl)
     if [[ "$quiet" ]]; then
         _systemctl+=("$quiet")
     fi
@@ -67,11 +67,11 @@ enable_extra_sign() {
     for entry in "${loaded[@]}"; do
         read -r unit _ <<<"$entry"
         if ! in_array "$unit" "${to_enable[@]}"; then
-            "${_systemctl[@]}" disable "$unit"
+            "${_systemctl[@]}" disable --now "$unit"
         fi
     done
 
-    "${_systemctl[@]}" enable "${to_enable[@]}"
+    "${_systemctl[@]}" enable --now "${to_enable[@]}"
 }
 
 str_normalize() {
