@@ -106,12 +106,9 @@ cleanup() {
 if [[ -t 1 ]]; then
     try_enable_color
 else
-    _color_none=''
-    _color_bold=''
-    _color_green=''
-    _color_blue=''
-    _color_red=''
-    _color_yellow=''
+    for color in none bold green blue red yellow; do
+        declare -r "_color_$color"=''
+    done
 fi
 
 # shellcheck disable=SC1091,SC2016 source=sbupdate.conf
