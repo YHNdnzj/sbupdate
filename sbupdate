@@ -40,8 +40,8 @@ get_kernel() {
 
 enable_extra_sign() {
     local quiet="$1" _systemctl
-    local file escaped entry unit
-    local to_enable=() to_start=() loaded=()
+    local file escaped unit
+    local to_enable=() to_start=()
 
     if (( SBUPDATE_EXTRA_SIGN )); then
         return 0
@@ -67,13 +67,11 @@ enable_extra_sign() {
         fi
     done
 
-    mapfile -t loaded < <(systemctl list-units --quiet --plain --all "sbupdate@*.path")
-    for entry in "${loaded[@]}"; do
-        read -r unit _ <<<"$entry"
+    while read -r unit _; do
         if ! in_array "$unit" "${to_enable[@]}"; then
             "${_systemctl[@]}" disable --now "$unit"
         fi
-    done
+    done < <(systemctl list-units --quiet --plain --all "sbupdate@*.path")
 
     "${_systemctl[@]}" enable --now "${to_enable[@]}"
 
