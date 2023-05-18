@@ -117,15 +117,17 @@ fi
 [[ -d "$KEY_DIR" ]] || die "KEY_DIR '%s' doesn't exist or isn't a directory" "$KEY_DIR"
 
 _f_key="$KEY_DIR/DB.key" _f_cert="$KEY_DIR/DB.crt"
-[[ -f "$_f_key" && -f "$_f_cert" ]] || die "Cannot find Secure Boot key (DB.key) or cert (DB.crt) under KEY_DIR."
+[[ -f "$_f_key" && -f "$_f_cert" ]] || die "Cannot find Secure Boot key (DB.key) or cert (DB.crt) under KEY_DIR"
 
 if [[ "$1" ]]; then
     enable_extra_sign --quiet
 else
     if [[ -v KERNELDESTINATION ]]; then
+        # mkinitcpio is invoked without specifying kernel. Let's quit early.
         exit 0
     fi
 
+    # We're invoked directly by user
     enable_extra_sign
     exit
 fi
@@ -138,12 +140,12 @@ _efitype="$(bootctl kernel-identify "$_f_efi" 2>/dev/null)"
 
 if (( SBUPDATE_EXTRA_SIGN )); then
     _f_dest="${EXTRA_SIGN["$_f_efi"]}"
-    if [[ "$_f_dest" ]]; then
-        sbsign --key "$_f_key" --cert "$_f_cert" --output "$_f_dest" "$_f_efi"
-        exit
-    else
+    if [[ ! "$_f_dest" ]]; then
         die "Requested for EXTRA_SIGN but file '%s' isn't listed" "$_f_efi"
     fi
+
+    sbsign --key "$_f_key" --cert "$_f_cert" --output "$_f_dest" "$_f_efi"
+    exit
 fi
 
 _d_boot="$(bootctl --print-boot-path 2>/dev/null)"
@@ -178,9 +180,9 @@ fi
 if [[ ! "$_uki" ]]; then
     if (( _fallback )); then
         exit 0
-    else
-        die "Kernel '%s' has an empty 'uki' setting" "$_kernel"
     fi
+
+    die "Kernel '%s' has an empty 'uki' setting" "$_kernel"
 fi
 if [[ "$_uki" != *.efi ]]; then
     _uki+=".efi"
