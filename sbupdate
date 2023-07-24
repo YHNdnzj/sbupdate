@@ -11,8 +11,8 @@ _f_initramfs=''
 _d_boot='' _d_uki=''
 
 _efitype=''
-_kernel=''
-_cmdline='' _uki=''
+_kernel='' _uki=''
+_cmdline=''
 _fallback=0
 _ukify=()
 
@@ -104,8 +104,8 @@ cleanup() {
 if [[ -t 1 ]]; then
     try_enable_color
 else
-    for color in none bold green blue red yellow; do
-        declare -r "_color_$color"=''
+    for __color in none bold green blue red yellow; do
+        declare -r "_color_${__color}"=''
     done
 fi
 
@@ -142,8 +142,7 @@ if (( SBUPDATE_EXTRA_SIGN )); then
         die "Requested for EXTRA_SIGN but file '%s' isn't listed" "$_f_efi"
     fi
 
-    sbsign --key "$_f_key" --cert "$_f_cert" --output "$_f_dest" "$_f_efi"
-    exit
+    exec sbsign --key "$_f_key" --cert "$_f_cert" --output "$_f_dest" "$_f_efi"
 fi
 
 _d_boot="$(bootctl --print-boot-path 2>/dev/null)"
@@ -151,7 +150,7 @@ _d_boot="$(bootctl --print-boot-path 2>/dev/null)"
 
 _kernel="$(get_kernel "$_f_efi")"
 if [[ ! "$_kernel" ]]; then
-    msg "Kernel '%s' isn't configured in config '%s', ignoring" "$_f_efi" "$_f_config"
+    msg "Kernel '%s' isn't configured, ignoring" "$_f_efi"
     exit 0
 fi
 _f_initramfs="$2"
@@ -203,14 +202,17 @@ fi
 
 msg "Generating signed UKI '%s'" "$_f_dest"
 msg2 "Kernel: %s (%s) - %s" "$_kernel" "$KERNELVERSION" "$_f_efi"
-msg2 "Initramfs: %s" "$_f_initramfs"
 msg2 "Microcode(s): %s" "$(strnull "${MICROCODES[*]}")"
+msg2 "Initramfs: %s" "$_f_initramfs"
 msg2 "Cmdline: %s" "$(strnull "$_cmdline")"
 
-_ukify=(/usr/lib/systemd/ukify "$_f_efi" "${MICROCODES[@]}" "$_f_initramfs"
-        --cmdline="$_cmdline" --uname="$KERNELVERSION"
-        --secureboot-private-key="$_f_key" --secureboot-certificate="$_f_cert"
+_ukify=(/usr/lib/systemd/ukify build --linux="$_f_efi" --cmdline="$_cmdline" --uname="$KERNELVERSION"
+        --secureboot-private-key="$_f_key" --secureboot-certificate="$_f_cert" --signtool=sbsign
         --output="$_f_dest")
+
+for __initrd in "${MICROCODES[@]}" "$_f_initramfs"; do
+    _ukify+=(--initrd="$__initrd")
+done
 
 if [[ -v SPLASH ]]; then
     if [[ -f "$SPLASH" ]]; then
