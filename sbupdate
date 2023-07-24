@@ -40,12 +40,17 @@ get_kernel() {
 }
 
 enable_extra_sign() {
-    local quiet="$1" _systemctl
+    local quiet="$1" _systemctl=()
+    local system_state systemd_running=1
     local file escaped unit
     local to_enable=() to_start=()
 
     if (( SBUPDATE_EXTRA_SIGN )); then
         return 0
+    fi
+
+    if ! system_state="$(systemctl is-system-running)" && ! in_array "$system_state" "starting" "degraded"; then
+        systemd_running=0
     fi
 
     _systemctl=(systemctl)
@@ -55,7 +60,11 @@ enable_extra_sign() {
 
     if (( ${#EXTRA_SIGN[@]} == 0 )); then
         "${_systemctl[@]}" disable "sbupdate@.path"
-        "${_systemctl[@]}" stop "sbupdate@*.path"
+
+        if (( systemd_running )); then
+            "${_systemctl[@]}" stop "sbupdate@*.path"
+        fi
+
         return
     fi
 
@@ -68,15 +77,20 @@ enable_extra_sign() {
         fi
     done
 
-    while read -r unit _; do
-        if ! in_array "$unit" "${to_enable[@]}"; then
-            "${_systemctl[@]}" disable --now "$unit"
-        fi
-    done < <(systemctl list-units --quiet --plain --all "sbupdate@*.path")
+    if (( systemd_running )); then
+        while read -r unit _; do
+            if ! in_array "$unit" "${to_enable[@]}"; then
+                "${_systemctl[@]}" disable --now "$unit"
+            fi
+        done < <(systemctl list-units --quiet --plain --all "sbupdate@*.path")
+    fi
 
-    "${_systemctl[@]}" enable --now "${to_enable[@]}"
+    "${_systemctl[@]}" enable "${to_enable[@]}"
+    if (( systemd_running )); then
+        "${_systemctl[@]}" start "${to_enable[@]}"
+    fi
 
-    if (( ${#to_start[@]} > 0 )); then
+    if (( ${#to_start[@]} > 0 && systemd_running )); then
         "${_systemctl[@]}" start --no-block "${to_start[@]}"
     fi
 }
