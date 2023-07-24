@@ -21,6 +21,7 @@ CMDLINE_DEFAULT='' CMDLINE_ALWAYS=''
 UKI_SUFFIX=''
 MICROCODES=()
 
+UKIFY_EXTRA=()
 declare -A EXTRA_SIGN
 
 get_kernel() {
@@ -223,4 +224,4 @@ if [[ -v SPLASH ]]; then
     fi
 fi
 
-exec "${_ukify[@]}"
+exec "${_ukify[@]}" "${UKIFY_EXTRA[@]}"
