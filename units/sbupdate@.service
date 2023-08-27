@@ -3,5 +3,16 @@ Description=Sign the EFI binary '%f' using sbupdate
 
 [Service]
 Type=oneshot
+
+# When pacman installs package files, the inode we're
+# watching is firstly removed, instead of updating
+# in-place. This is similar to how install(1) behaves.
+# However, this creates a race: when we're started the
+# new file might not have been installed yet.
+#
+# This is hacky, but it's the only way I can come up with
+# to address the issue.
+ExecStartPre=-/bin/bash -c "pidof -q pacman && sleep 3"
+
 Environment=SBUPDATE_EXTRA_SIGN=1
 ExecStart=/usr/bin/sbupdate %f
