@@ -221,7 +221,7 @@ msg2 "Microcode(s): %s" "$(strnull "${MICROCODES[*]}")"
 msg2 "Initramfs: %s" "$_f_initramfs"
 msg2 "Cmdline: %s" "$(strnull "$_cmdline")"
 
-_ukify=(/usr/lib/systemd/ukify build --linux="$_f_efi" --cmdline="$_cmdline" --uname="$KERNELVERSION"
+_ukify=(ukify build --linux="$_f_efi" --cmdline="$_cmdline" --uname="$KERNELVERSION"
         --secureboot-private-key="$_f_key" --secureboot-certificate="$_f_cert" --signtool=sbsign
         --output="$_f_dest")
 
