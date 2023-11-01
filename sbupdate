@@ -212,7 +212,7 @@ mkdir -p "$_d_uki"
 _f_dest="$(realpath "$_d_uki/$_uki")"
 
 if [[ -f "$_f_dest" ]] && (( BACKUP )); then
-    mv --force --no-copy "$_f_dest" "${_f_dest}.bak"
+    mv --force --no-copy "$_f_dest" "${_f_dest}.bak" || msg "Failed to backup the old UKI, ignoring: %s" "$_f_dest"
 fi
 
 msg "Generating signed UKI '%s'" "$_f_dest"
